@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Telegram-бот: диалог-тренажёр для подготовки к Java-собеседованию.
 
-Режим: показывает вопрос → «Показать ответ» → «✅ Знаю / 🔁 Повторить / ➡️ Дальше».
+Режим: вопрос → 3–5 вариантов ответа → сравнение с правильным → разбор.
 Фильтры по приоритету (S/A/B/C), режим «только ошибки», перемешивание.
 Прогресс сохраняется на пользователя (PicklePersistence) и переживает рестарт.
 
@@ -37,6 +37,71 @@ log = logging.getLogger("trainer")
 
 TIER_EMOJI = {"S": "🟥", "A": "🟧", "B": "🟦", "C": "🟩"}
 TIER_NAME = {"S": "первый приоритет", "A": "высокий", "B": "средний", "C": "низкий"}
+BTN_LABEL_MAX = 60
+
+
+# ---------- quiz options ----------
+
+def short_label(text: str, max_len: int = BTN_LABEL_MAX) -> str:
+    text = " ".join(text.split())
+    for sep in (". ", "; ", " — ", " - ", ", "):
+        chunk = text.split(sep, 1)[0]
+        if sep.strip():
+            chunk += sep.rstrip()
+        if 12 <= len(chunk) <= max_len:
+            return chunk
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 1].rstrip() + "…"
+
+
+def build_quiz_options(qi: int) -> tuple[list[str], int]:
+    """Return 3–5 shuffled option labels; index of the correct one."""
+    q = QUESTIONS[qi]
+    correct_full = q["a"]
+    correct_label = short_label(correct_full)
+
+    ranked: list[tuple[int, str, str]] = []
+    for i, other in enumerate(QUESTIONS):
+        if i == qi:
+            continue
+        score = 0
+        if other["topic"] == q["topic"]:
+            score += 2
+        if other["t"] == q["t"]:
+            score += 1
+        ranked.append((score, other["a"], short_label(other["a"])))
+
+    ranked.sort(key=lambda x: (-x[0], x[2]))
+    n_wrong = random.randint(2, 4)
+    wrong: list[str] = []
+    seen = {correct_full.strip().lower(), correct_label.strip().lower()}
+    for _, full, label in ranked:
+        key = full.strip().lower()
+        if key in seen or label.strip().lower() in seen:
+            continue
+        wrong.append(label)
+        seen.add(key)
+        seen.add(label.strip().lower())
+        if len(wrong) >= n_wrong:
+            break
+
+    while len(wrong) < 2:
+        filler = f"Другой ответ по теме «{q['topic']}»"
+        if filler not in wrong:
+            wrong.append(filler)
+
+    options = wrong + [correct_label]
+    random.shuffle(options)
+    return options, options.index(correct_label)
+
+
+def prepare_quiz(d: dict, qi: int) -> None:
+    opts, correct = build_quiz_options(qi)
+    d["_options"] = opts
+    d["_correct_idx"] = correct
+    d["_answered"] = False
+    d["_picked"] = None
 
 
 # ---------- per-user state helpers ----------
@@ -71,7 +136,7 @@ def current_index(d: dict):
 
 # ---------- rendering ----------
 
-def card_text(d: dict, qi: int, revealed: bool) -> str:
+def card_header(d: dict, qi: int) -> str:
     q = QUESTIONS[qi]
     known = qi in d["known"]
     total = len(d["order"])
@@ -85,27 +150,63 @@ def card_text(d: dict, qi: int, revealed: bool) -> str:
         head += "  <i>(" + ", ".join(flags) + ")</i>"
     pos = f"{d['pos'] + 1}/{total}" if total else "0/0"
     known_n = len(set(d["known"]))
-    text = f"{head}\n<code>{pos}</code> · выучено: {known_n}/{len(QUESTIONS)}\n\n"
-    text += f"❓ <b>{html.escape(q['q'])}</b>"
-    if revealed:
-        text += f"\n\n💬 {html.escape(q['a'])}"
-        if q.get("note"):
-            text += f"\n\n⚠️ <i>{html.escape(q['note'])}</i>"
+    return f"{head}\n<code>{pos}</code> · выучено: {known_n}/{len(QUESTIONS)}\n\n"
+
+
+def quiz_question_text(d: dict, qi: int) -> str:
+    q = QUESTIONS[qi]
+    text = card_header(d, qi)
+    text += f"❓ <b>{html.escape(q['q'])}</b>\n\n"
+    text += "Выбери один из вариантов:"
     return text
 
 
-def card_kb(revealed: bool) -> InlineKeyboardMarkup:
-    if not revealed:
-        rows = [[InlineKeyboardButton("👁 Показать ответ", callback_data="rev")],
-                [InlineKeyboardButton("⬅️", callback_data="pv"),
-                 InlineKeyboardButton("⚙️ Фильтры", callback_data="menu"),
-                 InlineKeyboardButton("➡️", callback_data="nx")]]
+def quiz_result_text(d: dict, qi: int, picked_idx: int) -> str:
+    q = QUESTIONS[qi]
+    correct_idx = d["_correct_idx"]
+    ok = picked_idx == correct_idx
+    text = card_header(d, qi)
+    text += f"❓ <b>{html.escape(q['q'])}</b>\n\n"
+    if ok:
+        text += "✅ <b>Верно!</b>\n"
     else:
-        rows = [[InlineKeyboardButton("✅ Знаю", callback_data="kn"),
-                 InlineKeyboardButton("🔁 Повторить", callback_data="ag")],
-                [InlineKeyboardButton("⬅️", callback_data="pv"),
-                 InlineKeyboardButton("➡️ Дальше", callback_data="nx")]]
+        text += "❌ <b>Неверно.</b>\n"
+        text += f"Твой выбор: <i>{html.escape(d['_options'][picked_idx])}</i>\n"
+        text += f"Правильный вариант: <b>{html.escape(d['_options'][correct_idx])}</b>\n"
+    text += f"\n📖 <b>Разбор:</b>\n{html.escape(q['a'])}"
+    if q.get("note"):
+        text += f"\n\n⚠️ <i>{html.escape(q['note'])}</i>"
+    return text
+
+
+def quiz_options_kb(d: dict) -> InlineKeyboardMarkup:
+    rows = []
+    for i, opt in enumerate(d["_options"]):
+        letter = chr(65 + i)
+        label = f"{letter}. {opt}"
+        if len(label) > BTN_LABEL_MAX:
+            label = label[: BTN_LABEL_MAX - 1] + "…"
+        rows.append([InlineKeyboardButton(label, callback_data=f"ans{i}")])
+    rows.append(
+        [
+            InlineKeyboardButton("⬅️", callback_data="pv"),
+            InlineKeyboardButton("⚙️ Фильтры", callback_data="menu"),
+            InlineKeyboardButton("➡️", callback_data="nx"),
+        ]
+    )
     return InlineKeyboardMarkup(rows)
+
+
+def quiz_result_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✅ Знаю", callback_data="kn"),
+                InlineKeyboardButton("🔁 Ещё раз", callback_data="rp"),
+            ],
+            [InlineKeyboardButton("➡️ Следующий", callback_data="nx")],
+        ]
+    )
 
 
 def menu_kb(d: dict) -> InlineKeyboardMarkup:
@@ -130,9 +231,9 @@ async def show_card(update_or_q, context, edit: bool):
         text = "Под выбранные фильтры нет вопросов 🤷\nОткрой ⚙️ Фильтры и включи хотя бы один приоритет."
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("⚙️ Фильтры", callback_data="menu")]])
     else:
-        context.user_data["_revealed"] = False
-        text = card_text(d, qi, revealed=False)
-        kb = card_kb(revealed=False)
+        prepare_quiz(d, qi)
+        text = quiz_question_text(d, qi)
+        kb = quiz_options_kb(d)
     if edit:
         await update_or_q.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
     else:
@@ -148,10 +249,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not d["order"]:
         rebuild_order(d)
     await update.message.reply_text(
-        "🎙️ <b>Java Interview — диалог-тренажёр</b>\n\n"
-        "Читаешь вопрос → отвечаешь вслух → жмёшь «Показать ответ» и сверяешься.\n"
-        "Отмечай <b>✅ Знаю</b> или <b>🔁 Повторить</b>. Прогресс сохраняется.\n\n"
-        "Команды: /card — карточка · /menu — фильтры · /stats — прогресс · /reset — сброс",
+        "🎙️ <b>Java Interview — тренажёр с вариантами</b>\n\n"
+        "На каждый вопрос — <b>3–5 вариантов</b> ответа. Выбираешь один → бот сравнивает "
+        "с правильным и показывает <b>разбор</b>.\n"
+        "Отмечай <b>✅ Знаю</b> или жми <b>🔁 Ещё раз</b>. Прогресс сохраняется.\n\n"
+        "Команды: /card — вопрос · /menu — фильтры · /stats — прогресс · /reset — сброс",
         parse_mode=ParseMode.HTML,
     )
     await show_card(update, context, edit=False)
@@ -230,20 +332,33 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_card(q, context, edit=True)
         return
 
-    if data == "rev":
-        context.user_data["_revealed"] = True
-        await q.edit_message_text(card_text(d, qi, revealed=True),
-                                  parse_mode=ParseMode.HTML, reply_markup=card_kb(revealed=True))
+    if data.startswith("ans") and data[3:].isdigit():
+        if d.get("_answered"):
+            return
+        picked = int(data[3:])
+        if picked < 0 or picked >= len(d.get("_options", [])):
+            return
+        d["_answered"] = True
+        d["_picked"] = picked
+        if picked != d["_correct_idx"] and qi in d["known"]:
+            d["known"].remove(qi)
+        await q.edit_message_text(
+            quiz_result_text(d, qi, picked),
+            parse_mode=ParseMode.HTML,
+            reply_markup=quiz_result_kb(),
+        )
+        return
+    if data == "rp":
+        prepare_quiz(d, qi)
+        await q.edit_message_text(
+            quiz_question_text(d, qi),
+            parse_mode=ParseMode.HTML,
+            reply_markup=quiz_options_kb(d),
+        )
         return
     if data == "kn":
         if qi not in d["known"]:
             d["known"].append(qi)
-        d["pos"] = (d["pos"] + 1) % len(d["order"])
-        await show_card(q, context, edit=True)
-        return
-    if data == "ag":
-        if qi in d["known"]:
-            d["known"].remove(qi)
         d["pos"] = (d["pos"] + 1) % len(d["order"])
         await show_card(q, context, edit=True)
         return
