@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Misc
+*.log
+
+# Large media / binaries (kept on disk, excluded from git)
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.wav
+*.mp3
+*.zip
+
+# Python / bot runtime
+__pycache__/
+*.pyc
+bot_state.pickle

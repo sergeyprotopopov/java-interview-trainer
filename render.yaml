@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: java-interview-bot
+    runtime: python
+    plan: free
+    rootDir: training/bot
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    autoDeploy: true
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_PATH
+        value: tg-webhook
+      # Render injects RENDER_EXTERNAL_URL and PORT automatically -> bot runs in webhook mode.

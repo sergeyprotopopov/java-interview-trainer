@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>Java Interview — Диалог-тренажёр</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#334155; --txt:#e2e8f0; --muted:#94a3b8;
+    --accent:#38bdf8; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    --s:#ef4444; --a:#f59e0b; --b:#38bdf8; --c:#64748b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  header{padding:14px 16px;background:rgba(15,23,42,.95);position:sticky;top:0;z-index:10;
+    border-bottom:1px solid var(--card2);backdrop-filter:blur(8px)}
+  h1{font-size:16px;margin:0 0 10px;font-weight:700;letter-spacing:.2px}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{padding:6px 11px;border-radius:999px;background:var(--card);color:var(--muted);
+    font-size:12px;border:1px solid var(--card2);cursor:pointer;user-select:none;font-weight:600}
+  .chip.on{background:var(--accent);color:#05202e;border-color:var(--accent)}
+  .chip.on[data-t="S"]{background:var(--s);border-color:var(--s);color:#fff}
+  .chip.on[data-t="A"]{background:var(--a);border-color:var(--a);color:#311b00}
+  .chip.on[data-t="B"]{background:var(--b);border-color:var(--b);color:#05202e}
+  .chip.on[data-t="C"]{background:var(--c);border-color:var(--c);color:#fff}
+  .bar{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
+  .progress{flex:1;height:6px;background:var(--card2);border-radius:999px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:var(--good);transition:width .3s}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:16px}
+  .card{width:100%;max-width:560px;background:var(--card);border:1px solid var(--card2);
+    border-radius:18px;padding:20px;min-height:48vh;display:flex;flex-direction:column;
+    box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .meta{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .tier{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;color:#fff}
+  .tier.S{background:var(--s)} .tier.A{background:var(--a);color:#311b00}
+  .tier.B{background:var(--b);color:#05202e} .tier.C{background:var(--c)}
+  .topic{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .flag{font-size:11px;color:var(--bad);font-weight:700;margin-left:auto}
+  .q{font-size:19px;line-height:1.45;font-weight:600}
+  .a{margin-top:16px;padding-top:16px;border-top:1px dashed var(--card2);
+    font-size:15px;line-height:1.55;color:#cbd5e1;display:none}
+  .a.show{display:block;animation:fade .25s ease}
+  .note{margin-top:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);
+    border-radius:10px;padding:10px 12px;font-size:13px;color:#fecaca}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .spacer{flex:1}
+  .reveal{margin-top:16px;width:100%;padding:14px;border:none;border-radius:12px;
+    background:var(--accent);color:#05202e;font-size:16px;font-weight:800;cursor:pointer}
+  .rate{display:none;gap:10px;margin-top:16px}
+  .rate.show{display:flex}
+  .rate button{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;
+    font-weight:800;cursor:pointer;color:#fff}
+  .again{background:var(--bad)} .know{background:var(--good)}
+  footer{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--card2)}
+  footer button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--card2);
+    background:var(--card);color:var(--txt);font-size:14px;font-weight:600;cursor:pointer}
+  .empty{text-align:center;color:var(--muted);padding:40px 0}
+  .stat{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎙️ Java Interview — диалог-тренажёр</h1>
+  <div class="filters" id="filters">
+    <span class="chip on" data-t="S">S</span>
+    <span class="chip on" data-t="A">A</span>
+    <span class="chip on" data-t="B">B</span>
+    <span class="chip on" data-t="C">C</span>
+    <span class="chip" data-t="ERR" id="errChip">‼️ только ошибки</span>
+    <span class="chip" data-t="SHUF" id="shufChip">🔀 перемешать</span>
+  </div>
+  <div class="bar">
+    <span class="stat" id="counter">0 / 0</span>
+    <div class="progress"><i id="prog"></i></div>
+    <span class="stat" id="known">✓ 0</span>
+  </div>
+</header>
+
+<main>
+  <div class="card" id="card">
+    <div class="meta">
+      <span class="tier" id="tier">S</span>
+      <span class="topic" id="topic"></span>
+      <span class="flag" id="flag"></span>
+    </div>
+    <div class="q" id="q">Загрузка…</div>
+    <div class="a" id="a"></div>
+    <div class="note" id="note" style="display:none"></div>
+    <div class="spacer"></div>
+    <button class="reveal" id="reveal">Показать ответ</button>
+    <div class="rate" id="rate">
+      <button class="again" id="again">Повторить</button>
+      <button class="know" id="know">Знаю ✓</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <button id="prev">‹ Назад</button>
+  <button id="reset">Сбросить прогресс</button>
+  <button id="next">Дальше ›</button>
+</footer>
+
+<script>
+const DATA = [
+{t:"S",topic:"Транзакции",err:false,q:"Какие есть уровни изоляции транзакций и какой дефолтный?",a:"Четыре по стандарту SQL: READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE. Чем выше — тем меньше аномалий (грязное/неповторяемое чтение, фантомы), но ниже параллелизм. Дефолт: PostgreSQL и Oracle — READ COMMITTED, MySQL (InnoDB) — REPEATABLE READ."},
+{t:"S",topic:"Транзакции",err:true,q:"Что такое грязное чтение и почему в PostgreSQL READ UNCOMMITTED = READ COMMITTED?",a:"Грязное чтение — транзакция видит незакоммиченные изменения другой. В PostgreSQL из-за MVCC каждая транзакция видит свой снимок, незакоммиченные версии ей не видны. Поэтому READ UNCOMMITTED фактически работает как READ COMMITTED — настоящего dirty read нет.",note:"Раньше отвечал неверно — учить."},
+{t:"S",topic:"JMM",err:true,q:"Делает ли volatile операции атомарными?",a:"Нет. volatile даёт только видимость (чтение/запись из main memory) и запрет переупорядочивания. count++ — это read-modify-write (3 операции), не атомарен. Для атомарности нужен AtomicInteger, synchronized или Lock.",note:"Задача «0 или 13»: result не был volatile."},
+{t:"S",topic:"JMM",err:false,q:"Что такое happens-before?",a:"Гарантия модели памяти Java: если A happens-before B, результаты A видны в B. Примеры: разблокировка монитора → его захват; запись в volatile → последующее чтение; старт потока → его код. Это про видимость и упорядочивание, не про время."},
+{t:"S",topic:"Spring",err:false,q:"Как устроен Spring DI-контейнер и как решает циклические зависимости?",a:"При старте сканирует пакеты, находит бины по аннотациям, строит BeanDefinition, создаёт бины и внедряет зависимости. Цикл через конструктор разрешить нельзя — ошибка; через сеттер/поле разрешает ранним раскрытием ссылки (early reference) или через @Lazy (внедряет прокси)."},
+{t:"S",topic:"Многопоточность",err:false,q:"Что такое deadlock и как избежать при переводах между счетами?",a:"Deadlock — потоки держат по ресурсу и ждут ресурс друг друга. Классика: поток 1 лочит A→B, поток 2 — B→A. Решение: захватывать локи в едином глобальном порядке (по id счёта), tryLock с таймаутом, стратегии Wait-Die/Wound-Wait."},
+{t:"S",topic:"БД блокировки",err:false,q:"Оптимистичная vs пессимистичная блокировка, что такое SELECT FOR UPDATE?",a:"Пессимистичная — блокируем строку сразу (SELECT ... FOR UPDATE), другие ждут; для высокой конкуренции. Оптимистичная — проверяем версию при коммите, при конфликте откат и повтор; для редких конфликтов. SELECT FOR UPDATE держит строковую блокировку до конца транзакции."},
+
+{t:"A",topic:"Java Core",err:false,q:"Каков контракт equals/hashCode?",a:"Если a.equals(b) → a.hashCode()==b.hashCode() обязательно. Обратное не обязательно (коллизии). Переопределяешь equals — обязан переопределить hashCode, иначе объект теряется в HashMap/HashSet. equals: рефлексивен, симметричен, транзитивен."},
+{t:"A",topic:"Java Core",err:false,q:"Почему ключ HashMap должен быть неизменяемым?",a:"Хэш считается при вставке и определяет бакет. Если поле, влияющее на hashCode, изменится после вставки — объект окажется не в том бакете и get его не найдёт. Поэтому ключи делают immutable (String, Integer)."},
+{t:"A",topic:"ООП",err:false,q:"Назови принципы ООП.",a:"Инкапсуляция (скрытие состояния), наследование (переиспользование), полиморфизм (один интерфейс — разные реализации), абстракция (выделение существенного). На практике предпочитают композицию наследованию."},
+{t:"A",topic:"ООП",err:false,q:"Композиция vs агрегация vs наследование?",a:"Наследование — «is-a», жёсткая связь. Композиция — «has-a» с владением, часть не живёт без целого (двигатель в машине). Агрегация — «has-a» без владения, части живут отдельно (студенты в группе). Предпочитают композицию: гибче."},
+{t:"A",topic:"ООП",err:false,q:"Интерфейс vs абстрактный класс?",a:"Абстрактный класс — частичная реализация + состояние, одиночное наследование. Интерфейс — контракт, множественная реализация, с Java 8 default/static методы, без состояния. Интерфейс — для полиморфизма без общей базы; абстрактный класс — когда есть общий код и состояние."},
+{t:"A",topic:"Коллекции",err:false,q:"ArrayList vs LinkedList?",a:"ArrayList — массив, доступ O(1), вставка в середину O(n), кэш-френдли, почти всегда быстрее. LinkedList — двусвязный список, O(1) вставка по найденному узлу, O(n) доступ по индексу, большой оверхед. Реально LinkedList нужен редко."},
+{t:"A",topic:"Коллекции",err:false,q:"Как сделать LRU-кэш?",a:"LinkedHashMap с accessOrder=true и переопределением removeEldestEntry — сам выселяет старейший при превышении размера. Внутри: хэш-таблица + двусвязный список порядка доступа."},
+{t:"A",topic:"Java Core",err:false,q:"Comparable vs Comparator?",a:"Comparable — естественный порядок, compareTo, в самом классе. Comparator — внешний порядок, compare, можно несколько, удобно лямбдами: Comparator.comparing(User::getAge).thenComparing(User::getName)."},
+{t:"A",topic:"JVM",err:false,q:"Какие есть сборщики мусора?",a:"Serial (однопоточный), Parallel (пропускной), G1 (дефолт, регионы, предсказуемые паузы), ZGC и Shenandoah (низколатентные, паузы <1мс, большие кучи). Принцип: найти недостижимые от GC roots объекты и освободить, обычно поколенчески."},
+{t:"A",topic:"Java Core",err:false,q:"Размеры и ограничения числовых типов?",a:"int — 32 бита, ±2.1 млрд; long — 64; float — 32, double — 64 (неточные, не для денег); BigDecimal — произвольная точность, для денег. Переполнение int молча заворачивается — для денег/счётчиков брать long/BigDecimal."},
+{t:"A",topic:"Индексы",err:false,q:"Какие бывают индексы и какова цена их наличия?",a:"B-Tree (дефолт, диапазоны/сортировка), Hash (равенство), составной (порядок колонок, left-prefix), частичный, уникальный, полнотекстовый, кластеризованный (физический порядок). Цена: ускоряют чтение, замедляют запись и занимают место."},
+{t:"A",topic:"JVM",err:false,q:"Что такое Reflection и цепочка ClassLoader'ов?",a:"Reflection — доступ к структуре класса в рантайме (поля, методы, аннотации с RUNTIME), динамическое создание/вызов. ClassLoader'ы — иерархия с делегированием родителю: Bootstrap → Platform → Application. Сначала спрашивают родителя, потом грузят сами."},
+{t:"A",topic:"Транзакции",err:false,q:"Что такое MVCC в PostgreSQL?",a:"Multi-Version Concurrency Control: на изменение создаётся новая версия строки, старые видны транзакциям с их снимком. Читатели не блокируют писателей. SERIALIZABLE в PG — это SSI (snapshot isolation), отслеживает опасные пересечения и откатывает конфликт."},
+{t:"A",topic:"Многопоточность",err:true,q:"Как обеспечивается атомарность Atomic/CAS?",a:"Через CAS (Compare-And-Swap): «сравни с ожидаемым и, если совпало, замени, иначе повтори». Опирается на инструкцию процессора (CMPXCHG), в JVM через Unsafe/VarHandle. Это lock-free, в цикле повторов. Не «просто метод» и не value++.",note:"Интервьюер тянул к сути реализации, а не применению."},
+{t:"A",topic:"Паттерны",err:false,q:"Назови три типа паттернов проектирования с примерами.",a:"Порождающие: Singleton, Factory Method, Builder. Структурные: Adapter, Decorator, Facade, Proxy. Поведенческие: Strategy, Observer, Command, Template Method."},
+{t:"A",topic:"Сети",err:true,q:"OSI: кто что делает — DNS, ARP, NAT, DHCP?",a:"DNS — имя→IP. ARP — IP→MAC в локальной сети. DHCP — автовыдача сетевых настроек устройству. NAT — приватный IP↔публичный на выходе. Маршрутизация между сетями — сетевой уровень (L3); MAC и кадры — канальный (L2).",note:"Была путаница ARP/DNS/NAT."},
+
+{t:"B",topic:"Kafka",err:false,q:"Как устроена Kafka и чем отличается от JMS/RabbitMQ?",a:"Kafka — распределённый лог. Топики из партиций, сообщения хранятся на диске и не удаляются после чтения (retention), потребители читают по offset, есть consumer groups. Отличие: не «доставил и удалил», а durable-лог с перечитыванием, упорядоченность в партиции, высокая пропускная способность."},
+{t:"B",topic:"REST",err:false,q:"Как сделать REST надёжным?",a:"Идемпотентность (повтор не меняет результат, для POST — idempotency key), таймауты, ретраи с backoff, circuit breaker против каскадных отказов, корректные статус-коды, DLQ для асинхронщины."},
+{t:"B",topic:"System Design",err:false,q:"Лента новостей — pull или push?",a:"Pull (fan-out on read) — лента собирается при запросе; дёшево по записи, дорого по чтению. Push (fan-out on write) — пост разлетается в ленты подписчиков; быстрое чтение, дорого для «звёзд». На практике гибрид + кэш + ранжирование."},
+{t:"B",topic:"Микросервисы",err:false,q:"Что такое Saga?",a:"Паттерн распределённых транзакций без 2PC: операция разбита на локальные транзакции в сервисах, на каждый шаг есть компенсирующее действие. Шаг упал — запускаются компенсации. Бывает оркестрация (координатор) и хореография (события)."},
+{t:"B",topic:"Тестирование",err:false,q:"Что и как мокать в тестах (Mockito)?",a:"Мокаем внешние зависимости класса — репозитории, клиенты сервисов, чтобы изолировать логику. when(...).thenReturn(...) задаёт поведение, verify(...) проверяет вызовы. Не мокаем то, что тестируем, и простые value-объекты."},
+{t:"B",topic:"Реактивность",err:true,q:"Зачем нужна реактивность (WebFlux/Reactor)?",a:"Не «для UI». Это про неблокирующий I/O: малым числом потоков обслуживать много соединений (high concurrency, стриминг). Mono/Flux — асинхронные потоки 0..1/0..N с backpressure. Выигрыш на I/O-bound, не на CPU.",note:"Ранее назвал «для UI» — неверно."},
+{t:"B",topic:"Многопоточность",err:false,q:"ConcurrentHashMap vs synchronizedMap, что такое ThreadLocal?",a:"synchronizedMap лочит всю карту на каждую операцию. ConcurrentHashMap лочит по бинам — масштабируется, чтения почти без блокировок. ThreadLocal — у каждого потока своя копия переменной; в пулах надо чистить, иначе утечка."},
+{t:"B",topic:"Stream API",err:false,q:"Промежуточные vs терминальные операции, ленивость?",a:"Промежуточные (filter, map, sorted) возвращают стрим и ленивы. Терминальные (collect, forEach, reduce, count) запускают конвейер. Ленивость даёт short-circuit (findFirst, limit) и один проход по данным."},
+{t:"B",topic:"DDD",err:false,q:"Что такое DDD и bounded context?",a:"DDD — проектирование от предметной области и единого языка с экспертами. Bounded context — граница, где термины модели однозначны; в разных контекстах «Заказ» значит разное. Это не просто пакет, а семантическая граница со своей моделью."},
+{t:"B",topic:"CQRS",err:true,q:"CQRS — кто меняет состояние?",a:"Command меняет состояние (пишет), без возврата данных. Query только читает, без побочных эффектов. Разделяем модели чтения и записи; часто разные хранилища и независимое масштабирование.",note:"Раньше путал: говорил «Query меняет» — неверно."},
+{t:"B",topic:"Масштабирование",err:false,q:"Репликация vs шардирование vs масштабирование?",a:"Репликация — копии одних данных (надёжность + чтение с реплик). Шардирование — данные по узлам по ключу (горизонтальное масштабирование). Вертикальное — мощнее одна машина; горизонтальное — больше машин."},
+{t:"B",topic:"Паттерны",err:false,q:"Как написать потокобезопасный Singleton?",a:"Простой — статическое поле/enum (безопасно за счёт загрузки класса). Ленивый — double-checked locking: поле volatile, проверка null, synchronized-блок, повторная проверка. volatile обязателен, чтобы не отдать недоинициализированный объект."},
+{t:"B",topic:"SQL",err:false,q:"Разница WHERE и HAVING, зачем GROUP BY?",a:"GROUP BY группирует строки для агрегатов (COUNT, SUM). WHERE фильтрует строки до группировки, HAVING — после, по агрегатам (HAVING COUNT(*) > 5)."},
+
+{t:"C",topic:"Java Core",err:false,q:"String, StringBuilder, String Pool?",a:"String immutable — потокобезопасен, кэшируется. String Pool хранит литералы, одинаковые переиспользуются (intern). Для конкатенации в цикле — StringBuilder (быстрый, не потокобезопасный) или StringBuffer (синхронизированный)."},
+{t:"C",topic:"Сети",err:false,q:"HTTP/2 vs HTTP/1.1, что такое gRPC?",a:"HTTP/2 — мультиплексирование в одном соединении, бинарные фреймы, сжатие заголовков, server push. gRPC — RPC поверх HTTP/2 с Protobuf: компактно, быстро, стриминг, кодогенерация контрактов."},
+{t:"C",topic:"Контейнеры",err:false,q:"Контейнеры vs виртуализация?",a:"VM виртуализирует железо и тащит свою ОС — тяжело. Контейнеры делят ядро хоста, изоляция через namespaces (видимость) и cgroups (ресурсы) — легче, быстрый старт. Docker — образы/контейнеры, Kubernetes — оркестрация."},
+{t:"C",topic:"Java Core",err:false,q:"Исключения: checked/unchecked, final/finally/finalize?",a:"Checked (наследники Exception) — компилятор требует обработать. Unchecked (RuntimeException) — ошибки логики. Error — фатальные. final — нельзя менять/наследовать; finally — выполняется всегда; finalize — устаревший, не использовать."},
+{t:"C",topic:"Java Core",err:false,q:"Как избавиться от null / зачем Optional?",a:"Optional — явный «значение может отсутствовать», заставляет обработать пустоту (map, orElse, orElseThrow). Для возвращаемых значений, не для полей/параметров. Альтернативы: @Nullable/@NonNull, Null Object."},
+{t:"C",topic:"JVM",err:true,q:"Утечка памяти: heap или stack?",a:"Утечка — про heap: логически ненужные объекты держатся ссылками (статические коллекции, незакрытые ресурсы, ThreadLocal в пуле), GC их не собирает. В stack утечки нет — там StackOverflowError при глубокой рекурсии.",note:"Раньше путал heap и stack."},
+{t:"C",topic:"Масштабирование",err:false,q:"Синхронная vs асинхронная репликация — что с latency?",a:"Синхронная — мастер ждёт подтверждения реплики до коммита: сильнее консистентность, выше latency. Асинхронная — коммит сразу: быстро, но возможна потеря последних транзакций при сбое и отставание реплик."},
+{t:"C",topic:"БД",err:false,q:"Партиционирование vs шардирование?",a:"Партиционирование — разбиение таблицы на части в пределах одной БД (range/hash/list). Шардирование — распределение по разным узлам. Шардинг — это партиционирование через сеть для горизонтального масштабирования."},
+{t:"C",topic:"Коллекции",err:false,q:"Почему Arrays.asList().add() бросает исключение?",a:"Arrays.asList возвращает фиксированный список-обёртку над массивом; размер менять нельзя, add/remove кидают UnsupportedOperationException. Для изменения: new ArrayList<>(Arrays.asList(...))."}
+];
+
+const KEY="java_trainer_v1";
+let state = JSON.parse(localStorage.getItem(KEY) || "{}");
+state.known = state.known || {};
+state.tiers = state.tiers || {S:true,A:true,B:true,C:true};
+state.errOnly = state.errOnly || false;
+state.shuffle = state.shuffle || false;
+let order=[], idx=0;
+
+const $=id=>document.getElementById(id);
+function keyOf(item){return item.t+"|"+item.q.slice(0,30);}
+function save(){localStorage.setItem(KEY, JSON.stringify(state));}
+
+function build(){
+  let list = DATA.map((d,i)=>({d,i})).filter(x=>state.tiers[x.d.t]);
+  if(state.errOnly) list = list.filter(x=>x.d.err);
+  order = list.map(x=>x.i);
+  if(state.shuffle){
+    for(let i=order.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[order[i],order[j]]=[order[j],order[i]];}
+  }
+  if(idx>=order.length) idx=0;
+  render();
+}
+function render(){
+  const total=order.length;
+  const knownCount=DATA.filter(d=>state.known[keyOf(d)]).length;
+  $("counter").textContent=(total?idx+1:0)+" / "+total;
+  $("known").textContent="✓ "+knownCount;
+  $("prog").style.width=(total?((idx+1)/total*100):0)+"%";
+  if(!total){
+    $("q").textContent="Нет карточек под фильтр 🤷";
+    $("a").classList.remove("show");$("note").style.display="none";
+    $("reveal").style.display="none";$("rate").classList.remove("show");
+    $("topic").textContent="";$("flag").textContent="";$("tier").textContent="–";$("tier").className="tier C";
+    return;
+  }
+  const d=DATA[order[idx]];
+  $("tier").textContent=d.t; $("tier").className="tier "+d.t;
+  $("topic").textContent=d.topic;
+  $("flag").textContent=(d.err?"‼️ была ошибка ":"")+(state.known[keyOf(d)]?"· ✓ знаю":"");
+  $("q").textContent=d.q;
+  $("a").textContent=d.a; $("a").classList.remove("show");
+  if(d.note){$("note").textContent="💡 "+d.note;$("note").style.display="block";$("note").style.opacity=0;}
+  else $("note").style.display="none";
+  $("reveal").style.display="block";
+  $("rate").classList.remove("show");
+}
+function reveal(){
+  $("a").classList.add("show");
+  if($("note").style.display==="block") $("note").style.opacity=1;
+  $("reveal").style.display="none";
+  $("rate").classList.add("show");
+}
+function nextCard(){if(order.length){idx=(idx+1)%order.length;render();}}
+function prevCard(){if(order.length){idx=(idx-1+order.length)%order.length;render();}}
+
+$("reveal").onclick=reveal;
+$("next").onclick=nextCard;
+$("prev").onclick=prevCard;
+$("know").onclick=()=>{const d=DATA[order[idx]];state.known[keyOf(d)]=true;save();nextCard();};
+$("again").onclick=()=>{const d=DATA[order[idx]];delete state.known[keyOf(d)];save();nextCard();};
+$("reset").onclick=()=>{if(confirm("Сбросить весь прогресс?")){state.known={};save();render();}};
+
+$("filters").onclick=e=>{
+  const c=e.target.closest(".chip"); if(!c)return;
+  const t=c.dataset.t;
+  if(t==="ERR"){state.errOnly=!state.errOnly;c.classList.toggle("on",state.errOnly);}
+  else if(t==="SHUF"){state.shuffle=!state.shuffle;c.classList.toggle("on",state.shuffle);}
+  else {state.tiers[t]=!state.tiers[t];c.classList.toggle("on",state.tiers[t]);}
+  idx=0;save();build();
+};
+
+// init chip states
+["S","A","B","C"].forEach(t=>{const c=document.querySelector('.chip[data-t="'+t+'"]');c.classList.toggle("on",state.tiers[t]);});
+$("errChip").classList.toggle("on",state.errOnly);
+$("shufChip").classList.toggle("on",state.shuffle);
+
+// tap card body to reveal
+$("card").addEventListener("click",e=>{
+  if(e.target.closest("button"))return;
+  if($("reveal").style.display!=="none") reveal();
+});
+
+build();
+</script>
+</body>
+</html>
