@@ -1083,5 +1083,663 @@ QUESTIONS = [
             "Mutex — только в operating system, Java не поддерживает"
         ],
         "a": "synchronized — monitor enter/exit на object. ReentrantLock — явный lock/unlock, tryLock, fairness."
+    },
+    {
+        "t": "S",
+        "topic": "Транзакции",
+        "err": False,
+        "q": "Что такое атомарность (A) в ACID?",
+        "correct": "Все операции транзакции выполняются целиком или откатываются",
+        "wrong": [
+            "Только одна SQL-команда в транзакции",
+            "Данные видны другим до COMMIT",
+            "После COMMIT данные хранятся в Redis"
+        ],
+        "a": "Atomicity — «всё или ничего». Если одна операция упала — ROLLBACK всей транзакции. Классика: перевод между счетами.",
+        "note": "learning-backlog.md · Tier S · topics/02"
+    },
+    {
+        "t": "S",
+        "topic": "Транзакции",
+        "err": False,
+        "q": "Чем REPEATABLE READ отличается от SERIALIZABLE?",
+        "correct": "REPEATABLE READ фиксирует снимок; SERIALIZABLE запрещает несериализуемые пересечения",
+        "wrong": [
+            "SERIALIZABLE разрешает dirty read",
+            "REPEATABLE READ сильнее SERIALIZABLE по блокировкам",
+            "Разницы нет в PostgreSQL"
+        ],
+        "a": "REPEATABLE READ: повторный SELECT в транзакции даёт тот же результат. SERIALIZABLE (SSI в PG) дополнительно отлавливает опасные параллельные пересечения и откатывает.",
+        "note": "learning-backlog.md · Tier S · topics/02"
+    },
+    {
+        "t": "S",
+        "topic": "Транзакции",
+        "err": False,
+        "q": "Как обеспечивается долговечность (D) после COMMIT?",
+        "correct": "WAL (write-ahead log) — изменения сначала на диск, потом commit",
+        "wrong": [
+            "Данные только в RAM до следующего SELECT",
+            "COMMIT сразу удаляет WAL",
+            "Durability обеспечивает только Redis"
+        ],
+        "a": "Durability: после COMMIT данные переживут сбой. В Postgres — WAL, fsync, репликация для HA.",
+        "note": "learning-backlog.md · Tier S · topics/02"
+    },
+    {
+        "t": "S",
+        "topic": "БД блокировки",
+        "err": False,
+        "q": "Можно ли выполнять DDL (ALTER TABLE) внутри транзакции в PostgreSQL?",
+        "correct": "Да, DDL транзакционен — можно ROLLBACK",
+        "wrong": [
+            "Нет — DDL всегда autocommit как в MySQL",
+            "Только DBA может DDL в транзакции",
+            "DDL блокирует только SELECT, не INSERT"
+        ],
+        "a": "В PostgreSQL DDL участвует в транзакции и откатывается вместе с DML. Это важно при миграциях и откате схемы.",
+        "note": "learning-backlog.md · Tier S · gap: DDL в транзакциях"
+    },
+    {
+        "t": "S",
+        "topic": "Многопоточность",
+        "err": False,
+        "q": "Чем race condition отличается от deadlock?",
+        "correct": "Race — результат зависит от порядка без синхронизации; deadlock — взаимное ожидание локов",
+        "wrong": [
+            "Это синонимы",
+            "Race condition только в distributed systems",
+            "Deadlock — когда один поток быстрее другого"
+        ],
+        "a": "Race condition: два потока читают и инкрементят — один update теряется. Deadlock: A ждёт B, B ждёт A. Лечение race — sync/Atomic.",
+        "note": "learning-backlog.md · Tier S · topics/10"
+    },
+    {
+        "t": "S",
+        "topic": "Многопоточность",
+        "err": False,
+        "q": "Wait-Die и Wound-Wait — это про что?",
+        "correct": "Стратегии предотвращения deadlock при блокировках с таймстампами",
+        "wrong": [
+            "Способы garbage collection в JVM",
+            "Алгоритмы сортировки в ConcurrentHashMap",
+            "Режимы Kafka consumer group"
+        ],
+        "a": "Wait-Die: старый процесс ждёт молодого. Wound-Wait: старый «ранит» (откатывает) молодого. Применяют в СУБД для deadlock prevention.",
+        "note": "learning-backlog.md · Tier S · deadlock"
+    },
+    {
+        "t": "S",
+        "topic": "Spring",
+        "err": False,
+        "q": "Как Spring находит классы с @Component/@Service?",
+        "correct": "Component-scan (@ComponentScan) + BeanDefinitionRegistry",
+        "wrong": [
+            "Компилятор Java автоматически регистрирует бины",
+            "Только через application.properties spring.beans.list",
+            "Только классы в пакете java.lang"
+        ],
+        "a": "Spring сканирует указанные пакеты, находит stereotype-аннотации, регистрирует BeanDefinition, затем создаёт и внедряет бины. @Lazy — отложенная инициализация.",
+        "note": "learning-backlog.md · Tier S · gap: загрузка аннотаций"
+    },
+    {
+        "t": "S",
+        "topic": "JMM",
+        "err": False,
+        "q": "Когда volatile достаточно вместо synchronized?",
+        "correct": "Один поток пишет флаг, другие только читают — простой флаг состояния",
+        "wrong": [
+            "Для increment счётчика посетителей",
+            "Для изменения нескольких связанных полей",
+            "Для любой критической секции с записью"
+        ],
+        "a": "volatile — visibility + ordering для одного поля. Не для read-modify-write и не для инвариантов на нескольких полях.",
+        "note": "learning-backlog.md · Tier S · topics/10"
+    },
+    {
+        "t": "A",
+        "topic": "Коллекции",
+        "err": False,
+        "q": "HashMap vs TreeMap vs LinkedHashMap?",
+        "correct": "HashMap O(1); TreeMap — sorted O(log n); LinkedHashMap — порядок вставки/доступа",
+        "wrong": [
+            "TreeMap быстрее HashMap для get",
+            "LinkedHashMap не допускает null key",
+            "HashMap хранит элементы отсортированными"
+        ],
+        "a": "HashMap — хэш, без порядка. TreeMap — красно-чёрное дерево, сортировка по ключу. LinkedHashMap — порядок + LRU через accessOrder.",
+        "note": "learning-backlog.md · Tier A · topics/09"
+    },
+    {
+        "t": "A",
+        "topic": "DDD",
+        "err": False,
+        "q": "Entity vs Value Object?",
+        "correct": "Entity имеет идентичность (id); Value Object — равенство по значению",
+        "wrong": [
+            "Value Object всегда mutable",
+            "Entity без id — это Value Object только в DDD",
+            "Разницы нет — оба хранятся в одной таблице"
+        ],
+        "a": "Entity: User, Order — важен id. Value Object: Money, Address — immutable, сравнение по полям.",
+        "note": "learning-backlog.md · Tier A · topics/05"
+    },
+    {
+        "t": "A",
+        "topic": "DDD",
+        "err": False,
+        "q": "Что такое aggregate root?",
+        "correct": "Единственная точка входа для изменений группы связанных объектов",
+        "wrong": [
+            "Корень XML-конфигурации Spring",
+            "Главная таблица в star schema",
+            "Singleton в паттерне GoF"
+        ],
+        "a": "Агрегат — кластер объектов с корнем (Order → OrderLine). Все изменения только через корень, граница транзакции.",
+        "note": "learning-backlog.md · Tier A · topics/05"
+    },
+    {
+        "t": "A",
+        "topic": "Java Core",
+        "err": False,
+        "q": "RetentionPolicy: когда аннотация видна в runtime?",
+        "correct": "RUNTIME — доступна через reflection; CLASS — только в .class; SOURCE — только компилятор",
+        "wrong": [
+            "SOURCE — доступна в runtime",
+            "CLASS — Spring читает на лету из .java",
+            "RUNTIME — удаляется после компиляции"
+        ],
+        "a": "Spring/Hibernate/Jackson нужны RUNTIME-аннотации. SOURCE — Lombok/компилятор. CLASS — bytecode без reflection.",
+        "note": "learning-backlog.md · Tier A · topics/09"
+    },
+    {
+        "t": "A",
+        "topic": "SOLID",
+        "err": False,
+        "q": "Принцип Open/Closed — что значит на практике?",
+        "correct": "Расширяем поведение новым кодом, не меняя рабочий существующий",
+        "wrong": [
+            "Класс нельзя наследовать",
+            "Все методы должны быть final",
+            "Open — все поля public"
+        ],
+        "a": "OCP: новая фича через новый класс/стратегию/impl, а не правку стабильного модуля. Пример: новый PaymentProcessor вместо if-else в старом коде.",
+        "note": "learning-backlog.md · Tier A · topics/11"
+    },
+    {
+        "t": "A",
+        "topic": "SOLID",
+        "err": False,
+        "q": "Interface Segregation и Dependency Inversion — суть?",
+        "correct": "Много узких интерфейсов; зависимость от абстракций, не реализаций",
+        "wrong": [
+            "Один fat interface на весь проект",
+            "DIP — всегда inject через new",
+            "ISP — запрет интерфейсов в Java"
+        ],
+        "a": "ISP: клиент не зависит от методов, которые не использует. DIP: high-level модули зависят от абстракций (интерфейсов), DI в Spring — пример.",
+        "note": "learning-backlog.md · Tier A · topics/11"
+    },
+    {
+        "t": "A",
+        "topic": "Индексы",
+        "err": False,
+        "q": "Что такое кластеризованный индекс?",
+        "correct": "Задаёт физический порядок строк; листья содержат данные",
+        "wrong": [
+            "Отдельная копия таблицы в Redis",
+            "Индекс только для FULLTEXT поиска",
+            "В PostgreSQL их может быть сколько угодно на таблицу"
+        ],
+        "a": "Clustered index = порядок хранения. InnoDB — PK clustered. PG — heap + separate indexes (index-only scan иначе).",
+        "note": "learning-backlog.md · Tier A · topics/04"
+    },
+    {
+        "t": "A",
+        "topic": "SQL",
+        "err": False,
+        "q": "Когда оптимизатор выбирает nested loop join?",
+        "correct": "Маленькая таблица + индекс на большой — для каждой строки probe",
+        "wrong": [
+            "Всегда для двух таблиц по 10 млн строк",
+            "Только для CROSS JOIN",
+            "Когда нет индексов — nested loop быстрее hash"
+        ],
+        "a": "Nested loop: для каждой строки outer — поиск во inner. Хорош с индексом и малой outer. Иначе hash/merge join.",
+        "note": "learning-backlog.md · Tier A · topics/04"
+    },
+    {
+        "t": "A",
+        "topic": "ORM",
+        "err": False,
+        "q": "Что такое проблема N+1 в Hibernate?",
+        "correct": "1 запрос за список + N запросов за lazy-связи",
+        "wrong": [
+            "N таблиц в одном JOIN",
+            "N потоков выполняют один SQL",
+            "N индексов на одной колонке"
+        ],
+        "a": "Загрузили 100 Order, потом lazy OrderLine для каждого — 101 запрос. Лечение: fetch join, @EntityGraph, batch size.",
+        "note": "learning-backlog.md · Tier A · topics/04"
+    },
+    {
+        "t": "A",
+        "topic": "Транзакции",
+        "err": False,
+        "q": "Что такое неповторяемое чтение (non-repeatable read)?",
+        "correct": "Повторный SELECT в транзакции видит другие данные после commit другой TX",
+        "wrong": [
+            "Чтение незакоммиченных данных",
+            "Два одинаковых SELECT всегда дают одно и то же на READ UNCOMMITTED",
+            "Фантомные строки — это и есть non-repeatable read"
+        ],
+        "a": "Non-repeatable read — между двумя SELECT другая транзакция закоммитила изменение. REPEATABLE READ это блокирует. Phantom — отдельная аномалия.",
+        "note": "learning-backlog.md · Tier A · topics/02"
+    },
+    {
+        "t": "B",
+        "topic": "REST",
+        "err": False,
+        "q": "SOAP vs REST vs gRPC — когда что?",
+        "correct": "SOAP — enterprise XML/WS-*; REST — HTTP+JSON API; gRPC — бинарный RPC между сервисами",
+        "wrong": [
+            "gRPC только для браузерных UI",
+            "REST всегда быстрее gRPC",
+            "SOAP — единственный способ идемпотентности"
+        ],
+        "a": "REST — простой HTTP API наружу. gRPC+protobuf — межсервисное, стриминг. SOAP — legacy enterprise, тяжёлый XML.",
+        "note": "learning-backlog.md · Tier B · gap: SOAP/RPC/REST"
+    },
+    {
+        "t": "B",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Почему переменная в lambda должна быть effectively final?",
+        "correct": "Lambda захватывает копию значения; изменяемая переменная ломает семантику",
+        "wrong": [
+            "Компилятор не поддерживает mutable capture",
+            "Только для parallelStream",
+            "effectively final — это keyword Java 17"
+        ],
+        "a": "Локальные переменные в lambda — effectively final (не переприсваиваются). Поля объекта можно менять. Это про predictable capture.",
+        "note": "learning-backlog.md · Tier B · gap: identity + лямбды"
+    },
+    {
+        "t": "B",
+        "topic": "Многопоточность",
+        "err": False,
+        "q": "Зачем ExecutorService?",
+        "correct": "Пул потоков для переиспользования — не создавать Thread на каждую задачу",
+        "wrong": [
+            "Замена synchronized блоков",
+            "Только для ScheduledTask в Spring",
+            "ExecutorService = virtual threads в Java 21"
+        ],
+        "a": "ExecutorService управляет пулом worker threads, очередью задач, graceful shutdown. Fixed/cached/thread-per-task executors.",
+        "note": "learning-backlog.md · Tier B · gap: ExecutorService"
+    },
+    {
+        "t": "B",
+        "topic": "Реактивность",
+        "err": True,
+        "q": "CompletableFuture vs WebFlux — в чём разница?",
+        "correct": "CompletableFuture — async на пуле; WebFlux — non-blocking reactive stack end-to-end",
+        "wrong": [
+            "Это одно и то же API",
+            "CompletableFuture блокирует carrier thread при I/O",
+            "WebFlux только для UI в браузере"
+        ],
+        "a": "CompletableFuture хорош для параллельных вызовов нескольких сервисов. WebFlux/Reactor — event loop + non-blocking I/O, backpressure. ⚠ Не «для UI».",
+        "note": "learning-backlog.md · Tier B · topics/05"
+    },
+    {
+        "t": "B",
+        "topic": "Многопоточность",
+        "err": False,
+        "q": "Когда virtual threads (Java 21+) полезны?",
+        "correct": "Много блокирующих I/O задач — не привязывать OS-thread 1:1",
+        "wrong": [
+            "CPU-bound математика на всех ядрах",
+            "Замена synchronized везде",
+            "Только в Android Dalvik"
+        ],
+        "a": "Virtual threads легковесны: при блокировке на I/O освобождают carrier. Не для CPU-bound. Platform threads — для тяжёлой CPU работы.",
+        "note": "learning-backlog.md · Tier B · topics/10"
+    },
+    {
+        "t": "B",
+        "topic": "Soft skills",
+        "err": False,
+        "q": "Расшифруй STAR для ответов про опыт.",
+        "correct": "Situation, Task, Action, Result",
+        "wrong": [
+            "Skill, Time, Action, Review",
+            "Scope, Team, Agile, Retro",
+            "System, Test, Accept, Release"
+        ],
+        "a": "Situation — контекст. Task — задача. Action — что сделал ты. Result — измеримый итог. Структура для behavioral вопросов.",
+        "note": "learning-backlog.md · Tier C · topics/11"
+    },
+    {
+        "t": "B",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Что такое POJO?",
+        "correct": "Plain Old Java Object — без обязательного наследования от framework-классов",
+        "wrong": [
+            "Только record в Java 16+",
+            "Объект с одним public полем",
+            "Persistent Object в Hibernate only"
+        ],
+        "a": "POJO — обычный Java-класс с полями/геттерами, не tied to EJB/legacy frameworks. Spring/Hibernate работают с POJO + аннотации.",
+        "note": "learning-backlog.md · Tier C · gap: POJO"
+    },
+    {
+        "t": "B",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Зачем marker interface Serializable?",
+        "correct": "Сигнал JVM/фреймворку: объект можно сериализовать в byte stream",
+        "wrong": [
+            "Обязательный метод serialize()",
+            "Автоматически делает класс immutable",
+            "Заменяет JSON в REST"
+        ],
+        "a": "Serializable — marker без методов. Нужен для ObjectOutputStream, некоторых API. Лучше явные форматы (JSON, protobuf) для API.",
+        "note": "learning-backlog.md · Tier C · gap"
+    },
+    {
+        "t": "B",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Ограничение local var (var) в Java?",
+        "correct": "Только локальные переменные с инициализацией; тип выводится компилятором",
+        "wrong": [
+            "var для полей класса и параметров",
+            "var запрещён в for-each",
+            "var делает тип Object всегда"
+        ],
+        "a": "var — local type inference. Нельзя для полей, параметров без типа, lambda params (до Java 11). Нужна инициализация.",
+        "note": "learning-backlog.md · Tier C · gap"
+    },
+    {
+        "t": "B",
+        "topic": "Инфраструктура",
+        "err": False,
+        "q": "ClickHouse vs Cassandra vs MongoDB — профиль?",
+        "correct": "ClickHouse — OLAP аналитика; Cassandra — write-heavy wide-column; Mongo — документы гибкая схема",
+        "wrong": [
+            "Mongo — только OLAP",
+            "Cassandra — только реляционные JOIN",
+            "ClickHouse — primary OLTP bank core"
+        ],
+        "a": "ClickHouse — колоночная аналитика, агрегации. Cassandra — AP, масштаб записи. MongoDB — документы, гибкая схема, не замена Postgres OLTP.",
+        "note": "learning-backlog.md · Tier C · gap: alfabank infra"
+    },
+    {
+        "t": "B",
+        "topic": "Инфраструктура",
+        "err": False,
+        "q": "SLA 99.9% uptime — сколько простоя в год?",
+        "correct": "Около 8.76 часов в год",
+        "wrong": [
+            "Около 1 часа",
+            "Около 30 дней",
+            "99.9% = 0 простоя"
+        ],
+        "a": "99.9% = 0.1% downtime ≈ 8.76 ч/год. 99.99% ≈ 52 мин. Важно для SRE/собесов по нагрузке.",
+        "note": "learning-backlog.md · Tier C · gap: SLA"
+    },
+    {
+        "t": "B",
+        "topic": "Kafka",
+        "err": False,
+        "q": "Зачем Avro (или Schema Registry) с Kafka?",
+        "correct": "Эволюция схемы сообщений с совместимостью и компактным бинарным форматом",
+        "wrong": [
+            "Avro заменяет партиции",
+            "Только для XML SOAP",
+            "Schema Registry хранит offset consumer"
+        ],
+        "a": "Avro/Protobuf + Schema Registry — версионирование схем, backward/forward compatibility, меньше payload чем JSON.",
+        "note": "learning-backlog.md · Tier C · gap: Avro"
+    },
+    {
+        "t": "B",
+        "topic": "Масштабирование",
+        "err": False,
+        "q": "Eventual consistency после репликации — риск для приложения?",
+        "correct": "Чтение с lagging replica сразу после write может не увидеть данные",
+        "wrong": [
+            "Невозможно в PostgreSQL",
+            "Всегда решается автоматическим retry SELECT",
+            "Eventual consistency только в NoSQL"
+        ],
+        "a": "После COMMIT на primary реплика может отставать. Read-your-writes: читать с primary или ждать/retries. UI/API должны это учитывать.",
+        "note": "learning-backlog.md · Tier B · topics/03"
+    },
+    {
+        "t": "B",
+        "topic": "Масштабирование",
+        "err": False,
+        "q": "Бэкап vs репликация — ключевая разница?",
+        "correct": "Бэкап — снимок для восстановления; репликация — живая копия, не спасает от DELETE",
+        "wrong": [
+            "Репликация заменяет бэкап полностью",
+            "Бэкап обновляется в реальном времени как реплика",
+            "Разницы нет"
+        ],
+        "a": "Ошибочный DELETE реплицируется на standby. Бэкап/PITR восстанавливает состояние до ошибки. Нужны оба.",
+        "note": "learning-backlog.md · Tier B · topics/03"
+    },
+    {
+        "t": "B",
+        "topic": "SQL",
+        "err": False,
+        "q": "INNER JOIN vs LEFT JOIN — когда LEFT?",
+        "correct": "LEFT — все строки левой таблицы + совпадения справа (NULL если нет)",
+        "wrong": [
+            "LEFT — только совпадающие строки",
+            "INNER — сохраняет строки без пары с NULL",
+            "LEFT быстрее INNER всегда"
+        ],
+        "a": "INNER — только match. LEFT — все из left + optional right. «Клиенты без заказов» — LEFT + WHERE right IS NULL.",
+        "note": "learning-backlog.md · Tier B · topics/04"
+    },
+    {
+        "t": "B",
+        "topic": "Реактивность",
+        "err": True,
+        "q": "Почему WebFlux не даёт выигрыша при блокирующем JDBC?",
+        "correct": "Event loop блокируется на JDBC — нужен non-blocking driver (R2DBC) вся цепь",
+        "wrong": [
+            "WebFlux автоматически делает JDBC async",
+            "Проблема только в Tomcat, не Netty",
+            "WebFlux ускоряет CPU-bound код"
+        ],
+        "a": "Реактивный стек работает, если вся цепочка non-blocking. Блокирующий call в reactive thread убивает scalability.",
+        "note": "learning-backlog.md · Tier B · topics/05"
+    },
+    {
+        "t": "B",
+        "topic": "CQRS",
+        "err": False,
+        "q": "Когда CQRS оправдан?",
+        "correct": "Большой перекос read/write, сложные read-модели, отдельные витрины",
+        "wrong": [
+            "На любом CRUD из 3 таблиц",
+            "Только когда одна таблица",
+            "CQRS обязателен с Spring Data"
+        ],
+        "a": "CQRS — не для маленьких CRUD. Оправдан при разных моделях чтения/записи, search/reporting, масштабировании read side.",
+        "note": "learning-backlog.md · Tier B · topics/05"
+    },
+    {
+        "t": "B",
+        "topic": "Масштабирование",
+        "err": False,
+        "q": "Порядок масштабирования БД на практике?",
+        "correct": "Индексы/SQL → кэш → read replicas → partition → shard",
+        "wrong": [
+            "Сразу шардирование → потом индексы",
+            "Только vertical scale без оптимизации",
+            "Удалить индексы для ускорения write"
+        ],
+        "a": "Сначала дешёвое: EXPLAIN, индексы, query tuning. Потом Redis cache, реплики read, партиционирование, шардирование.",
+        "note": "learning-backlog.md · Tier B · topics/03"
+    },
+    {
+        "t": "B",
+        "topic": "Тестирование",
+        "err": False,
+        "q": "verify() в Mockito — зачем?",
+        "correct": "Проверить, что mock-метод вызван с ожидаемыми аргументами",
+        "wrong": [
+            "Заменить assertEquals",
+            "Создать новый mock объект",
+            "Запустить интеграционный тест"
+        ],
+        "a": "when().thenReturn() — stub поведения. verify() — проверка взаимодействия. Не мокать SUT, мокать границы.",
+        "note": "learning-backlog.md · Tier B · gap: Mock-тесты"
+    },
+    {
+        "t": "C",
+        "topic": "Сети",
+        "err": False,
+        "q": "Сколько уровней в модели OSI?",
+        "correct": "7 уровней",
+        "wrong": [
+            "5 уровней",
+            "4 уровня — как TCP/IP только",
+            "10 уровней"
+        ],
+        "a": "OSI: Physical, Data Link, Network, Transport, Session, Presentation, Application. На собесах часто: L2 MAC, L3 IP, L4 TCP/UDP.",
+        "note": "learning-backlog.md · Tier A · topics/07"
+    },
+    {
+        "t": "C",
+        "topic": "Сети",
+        "err": False,
+        "q": "TCP vs UDP — главное отличие?",
+        "correct": "TCP — надёжность, порядок, handshake; UDP — быстрее, без гарантий",
+        "wrong": [
+            "UDP всегда шифрует трафик",
+            "TCP не использует порты",
+            "UDP только для DNS и больше нигде"
+        ],
+        "a": "TCP: connection, ACK, retransmit. UDP: datagram, fire-and-forget — DNS, streaming, games где допустима потеря.",
+        "note": "learning-backlog.md · Tier C · topics/07"
+    },
+    {
+        "t": "C",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Модификатор protected — кто видит?",
+        "correct": "Пакет + наследники (даже из другого пакета)",
+        "wrong": [
+            "Только класс-наследник в том же файле",
+            "Везде как public",
+            "Только внутри interface"
+        ],
+        "a": "private — класс. package-private — пакет. protected — пакет + subclasses. public — все.",
+        "note": "learning-backlog.md · Tier C · topics/09"
+    },
+    {
+        "t": "C",
+        "topic": "Java Core",
+        "err": False,
+        "q": "JNI vs JNA — зачем?",
+        "correct": "Вызов native C/C++ кода из Java (JNI — низкоуровневый; JNA — проще без генерации заголовков)",
+        "wrong": [
+            "Способы сериализации JSON",
+            "Только для Android NDK exclusive",
+            "Замена JDBC"
+        ],
+        "a": "JNI — Java Native Interface для perf/legacy libs. JNA — обёртка без javah. Осторожно: crashes, portability.",
+        "note": "learning-backlog.md · Tier C · gap: JNI/JNA"
+    },
+    {
+        "t": "C",
+        "topic": "Spring",
+        "err": False,
+        "q": "Micronaut vs Spring Boot — ключевое отличие DI?",
+        "correct": "Micronaut — DI на этапе компиляции (AOT); Spring — runtime + reflection",
+        "wrong": [
+            "Micronaut не поддерживает DI",
+            "Spring Boot только для Groovy",
+            "Micronaut требует EJB container"
+        ],
+        "a": "Micronaut/AOT меньше reflection, быстрее cold start — интересно для serverless. Spring — richer ecosystem.",
+        "note": "learning-backlog.md · Tier C · gap: Micronaut"
+    },
+    {
+        "t": "C",
+        "topic": "Контейнеры",
+        "err": False,
+        "q": "Docker vs Kubernetes — роли?",
+        "correct": "Docker — образы и контейнеры на узле; Kubernetes — оркестрация кластера",
+        "wrong": [
+            "Kubernetes заменяет Docker Engine",
+            "Docker — только для Windows containers без Linux",
+            "Kubernetes — язык описания Dockerfile"
+        ],
+        "a": "Docker build/run container. K8s scheduling, scaling, service discovery, self-healing across nodes.",
+        "note": "learning-backlog.md · Tier C · topics/07"
+    },
+    {
+        "t": "C",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Что такое final class (пример String)?",
+        "correct": "Класс нельзя наследовать — защита инвариантов и immutability",
+        "wrong": [
+            "Все методы класса final",
+            "Класс нельзя инстанцировать",
+            "final class = record"
+        ],
+        "a": "final class запрещает extends. String — final для immutability и безопасности. Отдельно final method — нельзя override.",
+        "note": "learning-backlog.md · Tier C · topics/09"
+    },
+    {
+        "t": "B",
+        "topic": "Kafka",
+        "err": False,
+        "q": "Push vs Pull модель — RabbitMQ vs Kafka?",
+        "correct": "RabbitMQ push to consumer; Kafka pull by consumer по offset",
+        "wrong": [
+            "Kafka push сообщения consumer-ам",
+            "RabbitMQ только pull",
+            "Обе только broadcast без groups"
+        ],
+        "a": "Rabbit — broker push (prefetch/backpressure у consumer). Kafka — consumer pull, контролирует offset, replay.",
+        "note": "learning-backlog.md · Tier B · gap: Kafka vs Rabbit"
+    },
+    {
+        "t": "A",
+        "topic": "Java Core",
+        "err": False,
+        "q": "Максимальное значение int и что при переполнении?",
+        "correct": "±2.1 млрд; переполнение int молча wrap-around",
+        "wrong": [
+            "2^64",
+            "Exception на overflow",
+            "Автоматический promote в BigDecimal"
+        ],
+        "a": "int 32-bit signed. Overflow без exception (кроме Math.multiplyExact). Деньги/счётчики — long/BigDecimal.",
+        "note": "learning-backlog.md · Tier A · gap: числовые типы"
+    },
+    {
+        "t": "A",
+        "topic": "Многопоточность",
+        "err": False,
+        "q": "AtomicInteger vs synchronized для счётчика?",
+        "correct": "AtomicInteger — CAS без блокировки; проще и быстрее для одного счётчика",
+        "wrong": [
+            "synchronized всегда быстрее Atomic",
+            "Atomic блокирует весь класс",
+            "Для счётчика нужен только volatile"
+        ],
+        "a": "Простой increment — Atomic*. synchronized/Lock — если несколько связанных действий в критической секции.",
+        "note": "learning-backlog.md · Tier A · topics/10"
     }
 ]

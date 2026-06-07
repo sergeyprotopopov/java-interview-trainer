@@ -609,6 +609,10 @@ Q("B", "Многопоточность", "Mutex vs synchronized в Java?",
    "Mutex — только в operating system, Java не поддерживает"],
   "synchronized — monitor enter/exit на object. ReentrantLock — явный lock/unlock, tryLock, fairness.")
 
+from backlog_bank import add_questions
+
+add_questions(Q)
+
 
 def main():
     out = textwrap.dedent('''\
