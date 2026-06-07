@@ -11,6 +11,7 @@
     python bot.py
 """
 
+import asyncio
 import html
 import logging
 import os
@@ -282,6 +283,12 @@ def main():
     app.add_handler(CommandHandler("stats", stats_cmd))
     app.add_handler(CommandHandler("reset", reset_cmd))
     app.add_handler(CallbackQueryHandler(on_button))
+
+    # Python 3.14+ no longer auto-creates an event loop on the main thread.
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     # Webhook mode on hosting (Render sets RENDER_EXTERNAL_URL + PORT); polling locally.
     base = os.environ.get("WEBHOOK_URL") or os.environ.get("RENDER_EXTERNAL_URL")
